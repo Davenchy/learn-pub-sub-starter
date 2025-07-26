@@ -1,12 +1,14 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
 	"os/signal"
 
 	"github.com/bootdotdev/learn-pub-sub-starter/internal"
+	"github.com/bootdotdev/learn-pub-sub-starter/internal/gamelogic"
 	"github.com/bootdotdev/learn-pub-sub-starter/internal/pubsub"
 	"github.com/bootdotdev/learn-pub-sub-starter/internal/routing"
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -21,22 +23,48 @@ func main() {
 	}
 	defer conn.Close()
 
-	channel, err := conn.Channel()
+	ch, err := conn.Channel()
 	if err != nil {
 		log.Fatal("Failed to open a channel:", err)
 	}
-	defer channel.Close()
+	defer ch.Close()
 
-	if err := pubsub.PublishJSON(
-		channel,
-		routing.ExchangePerilDirect,
-		routing.PauseKey,
-		routing.PlayingState{IsPaused: true}); err != nil {
-		log.Fatal("Failed to publish message:", err)
-	}
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 
-	signalChan := make(chan os.Signal, 1)
-	signal.Notify(signalChan, os.Interrupt)
-	<-signalChan
+	go func() {
+		gamelogic.PrintServerHelp()
+		for {
+			inputs := gamelogic.GetInput()
+			for _, input := range inputs {
+				switch input {
+				case "":
+					continue
+				case "pause":
+					fmt.Println("Pausing game...")
+					if err := pubsub.PublishJSON(
+						ch, routing.ExchangePerilDirect,
+						routing.PauseKey,
+						routing.PlayingState{IsPaused: true}); err != nil {
+						log.Fatal("Failed to pause the game:", err)
+					}
+				case "resume":
+					fmt.Println("Resuming game...")
+					if err := pubsub.PublishJSON(
+						ch, routing.ExchangePerilDirect,
+						routing.PauseKey,
+						routing.PlayingState{IsPaused: false}); err != nil {
+						log.Fatal("Failed to resume the game:", err)
+					}
+				case "quit":
+					cancel()
+					return
+				default:
+					fmt.Println("Unknown command:", input)
+				}
+			}
+		}
+	}()
+
+	<-ctx.Done()
 	fmt.Println("Shutting down Peril server...")
 }
