@@ -6,14 +6,14 @@ import (
 	"os"
 	"os/signal"
 
+	"github.com/bootdotdev/learn-pub-sub-starter/internal"
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 func main() {
 	fmt.Println("Starting Peril server...")
 
-	RMQ_URL := "amqp://guest:guest@localhost:5672/"
-	conn, err := amqp.Dial(RMQ_URL)
+	conn, err := amqp.Dial(internal.GetRabbitMQURL())
 	if err != nil {
 		log.Fatal("Failed to connect to RabbitMQ:", err)
 	}
