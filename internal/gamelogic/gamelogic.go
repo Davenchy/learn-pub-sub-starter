@@ -10,6 +10,7 @@ import (
 )
 
 func PrintClientHelp() {
+	PrintClientHelpValues()
 	fmt.Println("Possible commands:")
 	fmt.Println("* move <location> <unitID> <unitID> <unitID>...")
 	fmt.Println("    example:")
@@ -23,6 +24,23 @@ func PrintClientHelp() {
 	fmt.Println("    spam 5")
 	fmt.Println("* quit")
 	fmt.Println("* help")
+}
+
+func PrintClientHelpValues() {
+	fmt.Println("Possible values:")
+	// print available locations
+	locations := []string{}
+	for loc := range getAllLocations() {
+		locations = append(locations, string(loc))
+	}
+	fmt.Println("* locations: " + strings.Join(locations, ", "))
+
+	// print available ranks
+	ranks := []string{}
+	for rank := range getAllRanks() {
+		ranks = append(ranks, string(rank))
+	}
+	fmt.Println("* ranks: " + strings.Join(ranks, ", "))
 }
 
 func ClientWelcome() (string, error) {
